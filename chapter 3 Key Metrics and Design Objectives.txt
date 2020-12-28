@@ -1,0 +1,220 @@
+CHAPTER	3	Key Metrics and Design Objectives
+
+Over the past few years, there has been a signiﬁcant amount of research on eﬃcient processing of DNNs. Accordingly, it is important to discuss the key metrics that one should consider when comparing and evaluating the strengths and weaknesses of diﬀerent designs and proposed techniques and that should be incorporated into design considerations. While eﬃciency is often only associated with the number of operations per second per Watt (e.g., ﬂoating-point operations per second per Watt as FLOPS/W or tera-operations per second per Watt as TOPS/W ), it is actually composed of many more metrics including accuracy, throughput, latency, energy consumption, power consumption, cost, ﬂexibility, and scalability. Reporting a comprehensive set of these metrics is important in order to provide a complete picture of the trade-oﬀs made by a proposed design or technique.
+
+In this chapter, we will
+•	discuss the importance of each of these metrics;
+•	breakdown the factors that aﬀect each metric. When feasible, present equations that describe the relationship between the factors and the metrics;
+•	describe how these metrics can be incorporated into design considerations for both the DNN hardware and the DNN model (i.e., workload); and
+•	specify what should be reported for a given metric to enable proper evaluation.
+
+Finally, we will provide a case study on how one might bring all these metrics together for a holistic evaluation of a given approach. But ﬁrst, we will discuss each of the metrics.
+
+3.1      ACCURACY
+
+Accuracy is used to indicate the quality of the result for a given task. The fact that DNNs can achieve state-of-the-art accuracy on a wide range of tasks is one of the key reasons driving the popularity and wide use of DNNs today. The units used to measure accuracy depend on the task. For instance, for image classiﬁcation, accuracy is reported as the percentage of correctly classiﬁed images, while for object detection, accuracy is reported as the mean average precision (mAP), which is related to the trade oﬀ between the true positive rate and false positive rate.	
+ 
+Factors that aﬀect accuracy include the diﬃculty of the task and dataset.1 For instance, classiﬁcation on ImageNet is much more diﬃcult than on MNIST, and object detection or semantic segmentation is more diﬃcult than classiﬁcation. As a result, a DNN model that performs well on MNIST may not necessarily perform well on ImageNet.
+
+Achieving high accuracy on diﬃcult tasks or datasets typically requires more complex DNN models (e.g., a larger number of MAC operations and more distinct weights, increased diversity in layer shapes, etc.), which can impact how eﬃciently the hardware can process the DNN model.
+
+Accuracy should therefore be interpreted in the context of the diﬃculty of the task and dataset.2 Evaluating hardware using well-studied, widely used DNN models, tasks, and datasets can allow one to better interpret the signiﬁcance of the accuracy metric. Recently, motivated by the impact of the SPEC benchmarks for general purpose computing [114], several industry and academic organizations have put together a broad suite of DNN models, called MLPerf, to serve as a common set of well-studied DNN models to evaluate the performance and enable fair comparison of various software frameworks, hardware accelerators, and cloud platforms for both training and inference of DNNs [115].3 The suite includes various types of DNNs (e.g., CNN, RNN, etc.) for a variety of tasks including image classiﬁcation, object identiﬁcation, translation, speech-to-text, recommendation, sentiment analysis, and reinforcement learning.
+
+3.2	THROUGHPUT AND LATENCY
+
+Throughput is used to indicate the amount of data that can be processed or the number of executions of a task that can be completed in a given time period. High throughput is often critical to an application. For instance, processing video at 30 frames per second is necessary for delivering real-time performance. For data analytics, high throughput means that more data can be analyzed in a given amount of time. As the amount of visual data is growing exponentially, highthroughput big data analytics becomes increasingly important, particularly if an action needs to be taken based on the analysis (e.g., security or terrorist prevention; medical diagnosis or drug discovery). Throughput is often generically reported as the number of operations per second. In the case of inference, throughput is reported as inferences per second or in the form of runtime in terms of seconds per inference.
+
+Latency measures the time between when the input data arrives to a system and when the result is generated. Low latency is necessary for real-time interactive applications, such as augmented reality, autonomous navigation, and robotics. Latency is typically reported in seconds.
+
+------
+1Ideally, robustness and fairness should be considered in conjunction with accuracy, as there is also an interplay between these factors; however, these are areas of on-going research and beyond the scope of this book.
+2As an analogy, getting 9 out of 10 answers correct on a high school exam is diﬀerent than 9 out of 10 answers correct on a college-level exam. One must look beyond the score and consider the diﬃculty of the exam.
+3Earlier DNN benchmarking eﬀorts including DeepBench [116] and Fathom [117] have now been subsumed by MLPerf.
+------
+
+Throughput and latency are often assumed to be directly derivable from one another. However, they are actually quite distinct. A prime example of this is the well-known approach of batching input data (e.g., batching multiple images or frames together for processing) to increase throughput since it amortizes overhead, such as loading the weights; however, batching also increases latency (e.g., at 30 frames per second and a batch of 100 frames, some frames will experience at least 3.3 second delay), which is not acceptable for real-time applications, such as high-speed navigation where it would reduce the time available for course correction. Thus, achieving low latency and high throughput simultaneously can sometimes be at odds depending on the approach and both should be reported.4
+
+There are several factors that aﬀect throughput and latency. In terms of throughput, the number of inferences per second is aﬀected by 
+ 
+(3.1)
+
+where the number of operations per second is dictated by both the DNN hardware and DNN model, while the number of operations per inference is dictated by the DNN model.
+
+When considering a system comprised of multiple processing elements (PEs), where a PE corresponds to a simple or primitive core that performs a single MAC operation, the number of operations per second can be further decomposed as follows:
+ 
+(3.2)
+
+The ﬁrst term reﬂects the peak throughput of a single PE, the second term reﬂects the amount of parallelism, while the last term reﬂects degradation due to the inability of the architecture to eﬀectively utilize the PEs.
+
+Since the main operation for processing DNNs is a MAC, we will use number of operations and number of MAC operations interchangeably.
+
+One can increase the peak throughput of a single PE by increasing the number of cycles per second, which corresponds to a higher clock frequency, by reducing the critical path at the circuit or micro-architectural level, or the number of cycles per operations, which can be aﬀected by the design of the MAC (e.g., a non-pipelined multi-cycle MAC would have more cycles per operation).
+
+------
+4The phenomenon described here can also be understood using Little’s Law [118] from queuing theory, where the relationship between average throughput and average latency are related by the average number of tasks in ﬂight, as deﬁned by
+(formulation 1)
+A DNN-centric version of Little’s Law would have throughput measured in inferences per second, latency measured in seconds, and inferences-in-ﬂight, as the tasks-in-ﬂight equivalent, measured in the number of images in a batch being processed simultaneously. This helps to explain why increasing the number of inferences in ﬂight to increase throughput may be counterproductive because some techniques that increase the number of inferences in ﬂight (e.g., batching) also increase latency.
+------
+ 
+While the above approaches increase the throughput of a single PE, the overall throughput can be increased by increasing the number of PEs, and thus the maximum number of MAC operations that can be performed in parallel. The number of PEs is dictated by the area density of the PE and the area cost of the system. If the area cost of the system is ﬁxed, then increasing the number of PEs requires either increasing the area density of the PE (i.e., reduce the area per PE) or trading oﬀ on-chip storage area for more PEs. Reducing on-chip storage, however, can aﬀect the utilization of the PEs, which we will discuss next.
+
+Increasing the density of PEs can also be achieved by reducing the logic associated with delivering operands to a MAC. This can be achieved by controlling multiple MACs with a single piece of logic. This is analogous to the situation in instruction-based systems such as CPUs and GPUs that reduce instruction bookkeeping overhead by using large aggregate instructions (e.g., single-instruction, multiple-data (SIMD)/Vector Instructions; single-instruction, multiple-threads (SIMT)/Tensor Instructions), where a single instruction can be used to initiate multiple operations.
+
+The number of PEs and the peak throughput of a single PE only indicate the theoretical maximum throughput (i.e., peak performance) when all PEs are performing computation (100% utilization). In reality, the achievable throughput depends on the actual utilization of those PEs, which is aﬀected by several factors as follows:
+ 
+(3.3)
+ 
+The ﬁrst term reﬂects the ability to distribute the workload to PEs, while the second term reﬂects how eﬃciently those active PEs are processing the workload.
+
+The number of active PEs is the number of PEs that receive work; therefore, it is desirable to distribute the workload to as many PEs as possible. The ability to distribute the workload is determined by the ﬂexibility of the architecture, for instance the on-chip network, to support the layer shapes in the DNN model.
+
+Within the constraints of the on-chip network, the number of active PEs is also determined by the speciﬁc allocation of work to PEs by the mapping process. The mapping process involves the placement and scheduling in space and time of every MAC operation (including the delivery of the appropriate operands) onto the PEs. Mapping can be thought of as a compiler for the DNN hardware. The design of on-chip networks and mappings are discussed in Chapters 5 and 6.
+
+The utilization of the active PEs is largely dictated by the timely delivery of work to the PEs such that the active PEs do not become idle while waiting for the data to arrive. This can be aﬀected by the bandwidth and latency of the (on-chip and oﬀ-chip) memory and network. The bandwidth requirements can be aﬀected by the amount of data reuse available in the DNN model and the amount of data reuse that can be exploited by the memory hierarchy and dataﬂow. The dataﬂow determines the order of operations and where data is stored and reused. The amount of data reuse can also be increased using a larger batch size, which is one of the reasons why increasing batch size can increase throughput. The challenge of data delivery and memory bandwidth are discussed in Chapters 5 and 6. The utilization of the active PEs can also be aﬀected by the imbalance of work allocated across PEs, which can occur when exploiting sparsity (i.e., avoiding unnecessary work associated with multiplications by zero); PEs with less work become idle and thus have lower utilization.
+ 
+Figure 3.1: The rooﬂine model. The peak operations per second is indicated by the bold line; when the operation intensity, which dictates by amount of compute per byte of data, is low, the operations per second is limited by the data delivery. The design goal is to operate as close as possible to the peak operations per second for the operation intensity of a given workload. 
+
+There is also an interplay between the number of PEs and the utilization of PEs. For instance, one way to reduce the likelihood that a PE needs to wait for data is to store some data locally near or within the PE. However, this requires increasing the chip area allocated to on-chip storage, which, given a ﬁxed chip area, would reduce the number of PEs. Therefore, a key design consideration is how much area to allocate to compute (which increases the number of PEs) versus on-chip storage (which increases the utilization of PEs).
+
+The impact of these factors can be captured using Eyexam, which is a systematic way of understanding the performance limits for DNN processors as a function of speciﬁc characteristics of the DNN model and accelerator design. Eyexam includes and extends the well-known rooﬂine model [119]. The rooﬂine model, as illustrated in Figure 3.1, relates average bandwidth demand and peak computational ability to performance. Eyexam is described in Chapter 6.
+
+While the number of operations per inference in Equation (3.1) depends on the DNN model, the operations per second depends on both the DNN model and the hardware. For example, designing DNN models with eﬃcient layer shapes (also referred to eﬃcient network architectures), as described in Chapter 9, can reduce the number of MAC operations in the DNN model and consequently the number of operations per inference. However, such DNN models can result in a wide range of layer shapes, some of which may have poor utilization of PEs and therefore reduce the overall operations per second, as shown in Equation (3.2).
+
+A deeper consideration of the operations per second, is that all operations are not created equal and therefore cycles per operation may not be a constant. For example, if we consider the fact that anything multiplied by zero is zero, some MAC operations are ineﬀectual (i.e., they do not change the accumulated value). The number of ineﬀectual operations is a function of both the DNN model and the input data. These ineﬀectual MAC operations can require fewer cycles or no cycles at all. Conversely, we only need to process eﬀectual (or non-zero) MAC operations, where both inputs are non-zero; this is referred to as exploiting sparsity, which is discussed in Chapter 8.
+
+Processing only eﬀectual MAC operations can increase the (total) operations per second by increasing the (total) operations per cycle.5 Ideally, the hardware would skip all ineﬀectual operations; however, in practice, designing hardware to skip all ineﬀectual operations can be challenging and result in increased hardware complexity and overhead, as discussed in Chapter 8. For instance, it might be easier to design hardware that only recognizes zeros in one of the operands (e.g., weights) rather than both. Therefore, the ineﬀectual operations can be further divided into those that are exploited by the hardware (i.e., skipped) and those that are unexploited by the hardware (i.e., not skipped). The number of operations actually performed by the hardware is therefore eﬀectual operations plus unexploited ineﬀectual operations.
+
+Equation (3.4) shows how operations per cycle can be decomposed into
+1.	the number of eﬀectual operations plus unexploited ineﬀectual operations per cycle, which remains somewhat constant for a given hardware accelerator design;
+2.	the ratio of eﬀectual operations over eﬀectual operations plus unexploited ineﬀectual operations, which refers to the ability of the hardware to exploit ineﬀectual operations (ideally unexploited ineﬀectual operations should be zero, and this ratio should be one); and
+3.	the number of eﬀectual operations out of (total) operations, which is related to the amount of sparsity and depends on the DNN model.
+
+As the amount of sparsity increases (i.e., the number of eﬀectual operations out of (total) operations decreases), the operations per cycle increases, which subsequently increases operations per second, as shown in Equation (3.2):
+ 
+(3.4)
+ 
+However, exploiting sparsity requires additional hardware to identify when inputs are zero to avoid performing unnecessary MAC operations. The additional hardware can increase the critical path, which decreases cycles per second, and also reduce area density of the PE, which reduces the number of PEs for a given area. Both of these factors can reduce the operations per second, as shown in Equation (3.2). Therefore, the complexity of the additional hardware can result in a trade oﬀ between reducing the number of unexploited ineﬀectual operations and increasing critical path or reducing the number of PEs.
+
+Finally, designing hardware and DNN models that support reduced precision (i.e., fewer bits per operand and per operations), which is discussed in Chapter 7, can also increase the number of operations per second. Fewer bits per operand means that the memory bandwidth required to support a given operation is reduced, which can increase the utilization of PEs since they are less likely to be starved for data. In addition, the area of each PE can be reduced, which can increase the number of PEs for a given area. Both of these factors can increase the operations per second, as shown in Equation (3.2). Note, however, that if multiple levels of precision need to be supported, additional hardware is required, which can, once again, increase the critical path and also reduce area density of the PE, both of which can reduce the operations per second, as shown in Equation (3.2).
+
+In this section, we discussed multiple factors that aﬀect the number of inferences per second. Table 3.1 classiﬁes whether the factors are dictated by the hardware, by the DNN model or both.
+In summary, the number of MAC operations in the DNN model alone is not suﬃcient for evaluating the throughput and latency. While the DNN model can aﬀect the number of MAC operations per inference based on the network architecture (i.e., layer shapes) and the sparsity of the weights and activations, the overall impact that the DNN model has on throughput and latency depends on the ability of the hardware to add support to recognize these approaches without signiﬁcantly reducing utilization of PEs, number of PEs, or cycles per second. This is why the number of MAC operations is not necessarily a good proxy for throughput and latency (e.g., Figure 3.2), and it is often more eﬀective to design eﬃcient DNN models with hardware in the loop. Techniques for designing DNN models with hardware in the loop are discussed in Chapter 9.
+
+Figure 3.2: The number of MAC operations in various DNN models versus latency measured on Pixel phone. Clearly, the number of MAC operations is not a good predictor of latency. (Figure from [120].) 
+
+Similarly, the number of PEs in the hardware and their peak throughput are not suﬃcient for evaluating the throughput and latency. It is critical to report actual runtime of the DNN models on hardware to account for other eﬀects such as utilization of PEs, as highlighted in Equation (3.2). Ideally, this evaluation should be performed on clearly speciﬁed DNN models, for instance those that are part of the MLPerf benchmarking suite. In addition, batch size should be reported in conjunction with the throughput in order to evaluate latency. 
+
+3.3	ENERGY EFFICIENCY AND POWER CONSUMPTION
+
+Energy eﬃciency is used to indicate the amount of data that can be processed or the number of executions of a task that can be completed for a given unit of energy. High energy eﬃciency is important when processing DNNs at the edge in embedded devices with limited battery capacity (e.g., smartphones, smart sensors, robots, and wearables). Edge processing may be preferred over the cloud for certain applications due to latency, privacy, or communication bandwidth limitations. Energy eﬃciency is often generically reported as the number of operations per joule. In the case of inference, energy eﬃciency is reported as inferences per joule or the inverse as energy consumption in terms of joules per inference.
+
+Power consumption is used to indicate the amount of energy consumed per unit time. Increased power consumption results in increased heat dissipation; accordingly, the maximum power consumption is dictated by a design criterion typically called the thermal design power (TDP), which is the power that the cooling system is designed to dissipate. Power consumption is important when processing DNNs in the cloud as data centers have stringent power ceilings due to cooling costs; similarly, handheld and wearable devices also have tight power constraints since the user is often quite sensitive to heat and the form factor of the device limits the cooling mechanisms (e.g., no fans). Power consumption is typically reported in watts or joules per second.
+
+Power consumption in conjunction with energy eﬃciency limits the throughput as follows:
+ 
+(3.5)
+
+Therefore, if we can improve energy eﬃciency by increasing the number of inferences per joule, we can increase the number of inferences per second and thus throughput of the system.
+
+There are several factors that aﬀect the energy eﬃciency. The number of inferences per joule can be decomposed into
+ 
+(3.6)
+
+where the number of operations per joule is dictated by both the hardware and DNN model, while the number of operations per inference is dictated by the DNN model.
+
+There are various design considerations for the hardware that will aﬀect the energy per operation (i.e., joules per operation). The energy per operation can be broken down into the energy required to move the input and output data, and the energy required to perform the MAC computation
+
+(3.7)
+
+For each component the joules per operation6 is computed as
+
+(3.8)
+
+where C is the total switching capacitance, VDD is the supply voltage, and ˛ is the switching activity, which indicates how often the capacitance is charged.
+
+------
+6Here, an operation can be a MAC operation or a data movement.
+------
+
+The energy consumption is dominated by the data movement as the capacitance of data movement tends to be much higher that the capacitance for arithmetic operations such as a MAC (Figure 3.3). Furthermore, the switching capacitance increases the further the data needs to travel to reach the PE, which consists of the distance to get out of the memory where the data is stored and the distance to cross the network between the memory and the PE. Accordingly, larger memories and longer interconnects (e.g., oﬀ-chip) tend to consume more energy than smaller and closer memories due to the capacitance of the long wires employed. In order to reduce the energy consumption of data movement, we can exploit data reuse where the data is moved once from distant large memory (e.g., oﬀ-chip DRAM) and reused for multiple operations from a local smaller memory (e.g., on-chip buﬀer or scratchpad within the PE). Optimizing data movement is a major consideration in the design of DNN accelerators; the design of the dataﬂow, which deﬁnes the processing order, to increase data reuse within the memory hierarchy is discussed in Chapter 5. In addition, advanced device and memory technologies can be used to reduce the switching capacitance between compute and memory, as described in Chapter 10.
+
+Figure 3.3: The energy consumption for various arithmetic operations and memory accesses in a 45 nm process. The relative energy cost (computed relative to the 8b add) is shown on a log scale. The energy consumption of data movement (red) is signiﬁcantly higher than arithmetic operations (blue). (Figure adapted from [121].)
+
+This raises the issue of the appropriate scope over which energy eﬃciency and power consumption should be reported. Including the entire system (out to the fans and power supplies) is beyond the scope of this book. Conversely, ignoring oﬀ-chip memory accesses, which can vary greatly between chip designs, can easily result in a misleading perception of the eﬃciency of the system. Therefore, it is critical to not only report the energy eﬃciency and power consumption of the chip, but also the energy eﬃciency and power consumption of the oﬀ-chip memory (e.g., DRAM) or the amount of oﬀ-chip accesses (e.g., DRAM accesses) if no speciﬁc memory technology is speciﬁed; for the latter, it can be reported in terms of the total amount of data that is read and written oﬀ-chip per inference.
+
+Reducing the joules per MAC operation itself can be achieved by reducing the switching activity and/or capacitance at a circuit level or micro-architecture level. This can also be achieved by reducing precision (e.g., reducing the bit width of the MAC operation), as shown in Figure 3.3 and discussed in Chapter 7. Note that the impact of reducing precision on accuracy must also be considered.
+
+For instruction-based systems such as CPUs and GPUs, this can also be achieved by reducing instruction bookkeeping overhead. For example, using large aggregate instructions (e.g., single-instruction, multiple-data (SIMD)/Vector Instructions; single-instruction, multiple-threads (SIMT)/Tensor Instructions), a single instruction can be used to initiate multiple operations.
+
+Similar to the throughput metric discussed in Section 3.2, the number of operations per inference depends on the DNN model, however the operations per joules may be a function of the ability of the hardware to exploit sparsity to avoid performing ineﬀectual MAC operations. Equation (3.9) shows how operations per joule can be decomposed into:
+1.	the number of eﬀectual operations plus unexploited ineﬀectual operations per joule, which remains somewhat constant for a given hardware architecture design;
+2.	the ratio of eﬀectual operations over eﬀectual operations plus unexploited ineﬀectual operations, which refers to the ability of the hardware to exploit ineﬀectual operations (ideally unexploited ineﬀectual operations should be zero, and this ratio should be one); and
+3.	the number of eﬀectual operations out of (total) operations, which is related to the amount of sparsity and depends on the DNN model.
+
+(3.9)
+
+For hardware that can exploit sparsity, increasing the amount of sparsity (i.e., decreasing the number of eﬀectual operations out of (total) operations) can increase the number of operations per joule, which subsequently increases inferences per joule, as shown in Equation (3.6). While exploiting sparsity has the potential of increasing the number of (total) operations per joule, the additional hardware will decrease the eﬀectual operations plus unexploited ineﬀectual operations per joule. In order to achieve a net beneﬁt, the decrease in eﬀectual operations plus unexploited ineffectual operations per joule must be more than oﬀset by the decrease of eﬀectual operations out of (total) operations.
+
+In summary, we want to emphasize that the number of MAC operations and weights in the DNN model are not suﬃcient for evaluating energy eﬃciency. From an energy perspective, all MAC operations or weights are not created equal. This is because the number of MAC operations and weights do not reﬂect where the data is accessed and how much the data is reused, both of which have a signiﬁcant impact on the operations per joule. Therefore, the number of MAC operations and weights is not necessarily a good proxy for energy consumption and it is often more eﬀective to design eﬃcient DNN models with hardware in the loop. Techniques for designing DNN models with hardware in the loop are discussed in Chapter 9.
+
+In order to evaluate the energy eﬃciency and power consumption of the entire system, it is critical to not only report the energy eﬃciency and power consumption of the chip, but also the energy eﬃciency and power consumption of the oﬀ-chip memory (e.g., DRAM) or the amount of oﬀ-chip accesses (e.g., DRAM accesses) if no speciﬁc memory technology is speciﬁed; for the latter, it can be reported in terms of the total amount of data that is read and written oﬀ-chip per inference. As with throughput and latency, the evaluation should be performed on clearly speciﬁed, ideally widely used, DNN models.
+
+3.4	HARDWARE COST
+
+In order to evaluate the desirability of a given architecture or technique, it is also important to consider the hardware cost of the design. Hardware cost is used to indicate the monetary cost to build a system.7 This is important from both an industry and a research perspective to dictate whether a system is ﬁnancially viable. From an industry perspective, the cost constraints are related to volume and market; for instance, embedded processors have a much more stringent cost limitations than processors in the cloud.
+
+One of the key factors that aﬀect cost is the chip area (e.g., square millimeters, mm2) in conjunction with the process technology (e.g., 45 nm CMOS), which constrains the amount of on-chip storage and amount of compute (e.g., the number of PEs for custom DNN accelerators, the number of cores for CPUs and GPUs, the number of digital signal processing (DSP) engines for FPGAs, etc.). To report information related to area, without specifying a speciﬁc process technology, the amount of on-chip memory (e.g, storage capacity of the global buﬀer) and compute (e.g., number of PEs) can be used as a proxy for area.
+
+Another important factor is the amount of oﬀ-chip bandwidth, which dictates the cost and complexity of the packaging and printed circuit board (PCB) design (e.g., High Bandwidth Memory (HBM) [122] to connect to oﬀ-chip DRAM, NVLink to connect to other GPUs, etc.), as well as whether additional chip area is required for a transceiver to handle signal integrity at high speeds. The oﬀ-chip bandwidth, which is typically reported in gigabits per second (Gbps), sometimes including the number of I/O ports, can be used as a proxy for packaging and PCB cost.
+
+------
+7There is also cost associated with operating a system, such as the electricity bill and the cooling cost, which are primarily dictated by the energy eﬃciency and power consumption, respectively. There is also cost associated with designing the system. The operating cost is covered by the section on energy eﬃciency and power consumption and we limited our coverage of design cost to the fact that custom DNN accelerators have a higher design cost than oﬀ-the-shelf CPUs and GPUs. We consider anything beyond this, e.g., the economics of the semiconductor business, including how to price platforms, is outside the scope of this book.
+------
+ 
+There is also an interplay between the costs attributable to the chip area and oﬀ-chip bandwidth. For instance, increasing on-chip storage, which increases chip area, can reduce oﬀchip bandwidth. Accordingly, both metrics should be reported in order to provide perspective on the total cost of the system.
+
+Of course reducing cost alone is not the only objective. The design objective is invariably to maximize the throughput or energy eﬃciency for a given cost, speciﬁcally, to maximize inferences per second per cost (e.g., $) and/or inferences per joule per cost. This is closely related to the previously discussed property of utilization; to be cost eﬃcient, the design should aim to utilize every PE to increase inferences per second, since each PE increases the area and thus the cost of the chip; similarly, the design should aim to eﬀectively utilize all the on-chip storage to reduce oﬀ-chip bandwidth, or increase operations per oﬀ-chip memory access as expressed by the rooﬂine model (see Figure 3.1), as each byte of on-chip memory also increases cost.
+
+3.5	FLEXIBILITY
+
+The merit of a DNN accelerator is also a function of its ﬂexibility. Flexibility refers to the range of DNN models that can be supported on the DNN processor and the ability of the software environment (e.g., the mapper) to maximally exploit the capabilities of the hardware for any desired DNN model. Given the fast-moving pace of DNN research and deployment, it is increasingly important that DNN processors support a wide range of DNN models and tasks.
+
+We can deﬁne support in two tiers: the ﬁrst tier requires that the hardware only needs to be able to functionally support diﬀerent DNN models (i.e., the DNN model can run on the hardware). The second tier requires that the hardware should also maintain eﬃciency (i.e., high throughput and energy eﬃciency) across diﬀerent DNN models.
+
+To maintain eﬃciency, the hardware should not rely on certain properties of the DNN models to achieve eﬃciency, as the properties cannot be guaranteed. For instance, a DNN accelerator that can eﬃciently support the case where the entire DNN model (i.e., all the weights) ﬁts on-chip may perform extremely poorly when the DNN model grows larger, which is likely given that the size of DNN models continue to increase over time, as discussed in Section 2.4.1; a more ﬂexible processor would be able to eﬃciently handle a wide range of DNN models, even those that exceed on-chip memory.
+ 
+The degree of ﬂexibility provided by a DNN accelerator is a complex trade-oﬀ with accelerator cost. Speciﬁcally, additional hardware usually needs to be added in order to ﬂexibly support a wider range of workloads and/or improve their throughput and energy eﬃciency. We all know that specialization improves eﬃciency; thus, the design objective is to reduce the overhead (e.g., area cost and energy consumption) of supporting ﬂexibility while maintaining eﬃciency across the wide range of DNN models. Thus, evaluating ﬂexibility would entail ensuring that the extra hardware is a net beneﬁt across multiple workloads.
+
+Flexibility has become increasingly important when we factor in the many techniques that are being applied to the DNN models with the promise to make them more eﬃcient, since they increase the diversity of workloads that need to be supported. These techniques include DNNs with diﬀerent network architectures (i.e., diﬀerent layer shapes, which impacts the amount of required storage and compute and the available data reuse that can be exploited), as described in Chapter 9, diﬀerent levels of precision (i.e., diﬀerent number of bits for across layers and data types), as described in Chapter 7, and diﬀerent degrees of sparsity (i.e., number of zeros in the data), as described in Chapter 8. There are also diﬀerent types of DNN layers and computation beyond MAC operations (e.g., activation functions) that need to be supported.
+
+Actually getting a performance or eﬃciency beneﬁt from these techniques invariably requires additional hardware, because a simpler DNN accelerator design may not beneﬁt from these techniques. Again, it is important that the overhead of the additional hardware does not exceed the beneﬁts of these techniques. This encourages a hardware and DNN model co-design approach.
+
+To date, exploiting the ﬂexibility of DNN hardware has relied on mapping processes that act like static per-layer compilers. As the ﬁeld moves to DNN models that change dynamically, mapping processes will need to dynamically adapt at runtime to changes in the DNN model or input data, while still maximally exploiting the ﬂexibility of the hardware to improve eﬃciency.
+
+In summary, to assess the ﬂexibility of DNN processors, its eﬃciency (e.g., inferences per second, inferences per joule) should be evaluated on a wide range of DNN models. The MLPerf benchmarking workloads are a good start; however, additional workloads may be needed to represent eﬃcient techniques such as eﬃcient network architectures, reduced precision and sparsity. The workloads should match the desired application. Ideally, since there can be many possible combinations, it would also be beneﬁcial to deﬁne the range and limits of DNN models that can be eﬃciently supported on a given platform (e.g., maximum number of weights per ﬁlter or DNN model, minimum amount of sparsity, required structure of the sparsity, levels of precision such as 8-bit, 4-bit, 2-bit, or 1-bit, types of layers and activation functions, etc.).
+
+3.6	SCALABILITY
+
+Scalability has become increasingly important due to the wide use cases for DNNs and emerging technologies used for scaling up not just the size of the chip, but also building systems with multiple chips (often referred to as chiplets) [123] or even wafer-scale chips [124]. Scalability refers to how well a design can be scaled up to achieve higher throughput and energy eﬃciency when increasing the amount of resources (e.g., the number of PEs and on-chip storage). This evaluation is done under the assumption that the system does not have to be signiﬁcantly redesigned (e.g., the design only needs to be replicated) since major design changes can be expensive in terms of time and cost. Ideally, a scalable design can be used for low-cost embedded devices and high-performance devices in the cloud simply by scaling up the resources.
+
+Ideally, the throughput would scale linearly and proportionally with the number of PEs. Similarly, the energy eﬃciency would also improve with more on-chip storage, however, this would be likely be nonlinear (e.g., increasing the on-chip storage such that the entire DNN model ﬁts on chip would result in an abrupt improvement in energy eﬃciency). In practice, this is often challenging due to factors such as the reduced utilization of PEs and the increased cost of data movement due to long distance interconnects.
+
+Scalability can be connected with cost eﬃciency by considering how inferences per second per cost (e.g., $) and inferences per joule per cost changes with scale. For instance, if throughput increases linearly with number of PEs, then the inferences per second per cost would be constant. It is also possible for the inferences per second per cost to improve super-linearly with increasing number of PEs, due to increased sharing of data across PEs.
+
+In summary, to understand the scalability of a DNN accelerator design, it is important to report its performance and eﬃciency metrics as the number of PEs and storage capacity increases. This may include how well the design might handle technologies used for scaling up, such as inter-chip interconnect.
+
+3.7	INTERPLAY BETWEEN DIFFERENT METRICS
+
+It is important that all metrics are accounted for in order to fairly evaluate all the design tradeoﬀs. For instance, without the accuracy given for a speciﬁc dataset and task, one could run a simple DNN and easily claim low power, high throughput, and low cost—however, the processor might not be usable for a meaningful task; alternatively, without reporting the oﬀ-chip bandwidth, one could build a processor with only multipliers and easily claim low cost, high throughput, high accuracy, and low chip power—however, when evaluating system power, the oﬀ-chip memory access would be substantial. Finally, the test setup should also be reported, including whether the results are measured or obtained from simulation8 and how many images were tested.
+
+In summary, the evaluation process for whether a DNN system is a viable solution for a given application might go as follows:
+1.	the accuracy determines if it can perform the given task;
+2.	the latency and throughput determine if it can run fast enough and in real time; 
+3.	the energy and power consumption will primarily dictate the form factor of the device where the processing can operate;
+4.	the cost, which is primarily dictated by the chip area and external memory bandwidth requirements, determines how much one would pay for this solution;
+5.	ﬂexibility determines the range of tasks it can support; and
+6.	the scalability determines whether the same design eﬀort can be amortized for deployment in multiple domains, (e.g., in the cloud and at the edge), and if the system can eﬃciently be scaled with DNN model size.
+
+------
+8If obtained from simulation, it should be clariﬁed whether it is from synthesis or post place-and-route and what library corner (e.g., process corner, supply voltage, temperature) was used.
+------

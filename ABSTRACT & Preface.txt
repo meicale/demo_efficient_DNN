@@ -1,0 +1,50 @@
+ABSTRACT & Preface
+
+ABSTRACT 
+
+This book provides a structured treatment of the key principles and techniques for enabling eﬃcient processing of deep neural networks (DNNs). DNNs are currently widely used for many artiﬁcial intelligence (AI) applications, including computer vision, speech recognition, and robotics. While DNNs deliver state-of-the-art accuracy on many AI tasks, it comes at the cost of high computational complexity. Therefore, techniques that enable eﬃcient processing of deep neural networks to improve key metrics—such as energy-eﬃciency, throughput, and latency—without sacriﬁcing accuracy or increasing hardware costs are critical to enabling the wide deployment of DNNs in AI systems.
+
+The book includes background on DNN processing; a description and taxonomy of hardware architectural approaches for designing DNN accelerators; key metrics for evaluating and comparing diﬀerent designs; features of DNN processing that are amenable to hardware/algorithm co-design to improve energy eﬃciency and throughput; and opportunities for applying new technologies. Readers will ﬁnd a structured introduction to the ﬁeld as well as formalization and organization of key concepts from contemporary work that provide insights that may spark new ideas.
+
+KEYWORDS
+
+deep learning, neural network, deep neural networks (DNN), convolutional neural networks (CNN), artiﬁcial intelligence (AI), eﬃcient processing, accelerator architecture, hardware/software co-design, hardware/algorithm co-design, domainspeciﬁc accelerators
+	
+ 
+Preface
+ 
+Deep neural networks (DNNs) have become extraordinarily popular; however, they come at the cost of high computational complexity. As a result, there has been tremendous interest in enabling eﬃcient processing of DNNs. The challenge of DNN acceleration is threefold:
+•	to achieve high performance and eﬃciency,
+•	to provide suﬃcient ﬂexibility to cater to a wide and rapidly changing range of workloads, and
+•	to integrate well into existing software frameworks.
+
+In order to understand the current state of art in addressing this challenge, this book aims to provide an overview of DNNs, the various tools for understanding their behavior, and the techniques being explored to eﬃciently accelerate their computation. It aims to explain foundational concepts and highlight key design considerations when building hardware for processing DNNs rather than trying to cover all possible design conﬁgurations, as this is not feasible given the fast pace of the ﬁeld (see Figure 1). It is targeted at researchers and practitioners who are familiar with computer architecture who are interested in how to eﬃciently process DNNs or how to design DNN models that can be eﬃciently processed. We hope that this book will provide a structured introduction to readers who are new to the ﬁeld, while also formalizing and organizing key concepts to provide insights that may spark new ideas for those who are already in the ﬁeld.
+
+Organization
+This book is organized into three modules that each consist of several chapters. The ﬁrst module aims to provide an overall background to the ﬁeld of DNN and insight on characteristics of the DNN  workload.
+•	Chapter 1 provides background on the context of why DNNs are important, their history, and their applications.
+•	Chapter 2 gives an overview of the basic components of DNNs and popular DNN models currently in use. It also describes the various resources used for DNN research and development. This includes discussion of the various software frameworks and the public datasets that are used for training and evaluation.
+
+
+Figure 1: It’s been observed that the number of ML publications are growing exponentially at a faster rate than Moore’s law! (Figure from [1].)
+
+The second module focuses on the design of hardware for processing DNNs. It discusses various architecture design decisions depending on the degree of customization (from general purpose platforms to full custom hardware) and design considerations when mapping the DNN workloads onto these architectures. Both temporal and spatial architectures are considered.
+•	Chapter 3 describes the key metrics that should be considered when designing or comparing various DNN accelerators.
+•	Chapter 4 describes how DNN kernels can be processed, with a focus on temporal architectures such as CPUs and GPUs. To achieve greater eﬃciency, such architectures generally have a cache hierarchy and coarser-grained computational capabilities, e.g., vector instructions, making the resulting computation more eﬃcient. Frequently for such architectures, DNN processing can be transformed into a matrix multiplication, which has many optimization opportunities. This chapter also discusses various software and hardware optimizations used to accelerate DNN computations on these platforms without impacting application accuracy.
+•	Chapter 5 describes the design of specialized hardware for DNN processing, with a focus on spatial architectures. It highlights the processing order and resulting data movement in the hardware used to process a DNN and the relationship to a loop nest representation of a DNN. The order of the loops in the loop nest is referred to as the dataﬂow, and it determines how often each piece of data needs to be moved. The limits of the loops in the loop nest describe how to break the DNN workload into smaller pieces, referred to as tiling/blocking to account for the limited storage capacity at diﬀerent levels of the memory hierarchy.
+•	Chapter 6 presents the process of mapping a DNN workload on to a DNN accelerator. It describes the steps required to ﬁnd an optimized mapping, including enumerating all legal mappings and searching those mappings by employing models that project throughput and energy eﬃciency.
+
+The third module discusses how additional improvements in eﬃciency can be achieved either by moving up the stack through the co-design of the algorithms and hardware or down the stack by using mixed signal circuits and new memory or device technology. In the cases where the algorithm is modiﬁed, the impact on accuracy must be carefully evaluated.
+•	Chapter 7 describes how reducing the precision of data and computation can result in increased throughput and energy eﬃciency. It discusses how to reduce precision using quantization and the associated design considerations, including hardware cost and impact on accuracy.
+•	Chapter 8 describes how exploiting sparsity in DNNs can be used to reduce the footprint of the data, which provides an opportunity to reduce storage requirements, data movement, and arithmetic operations. It describes various sources of sparsity and techniques to increase sparsity. It then discusses how sparse DNN accelerators can translate sparsity into improvements in energy-eﬃciency and throughput. It also presents a new abstract data representation that can be used to express and obtain insight about the dataﬂows for a variety of sparse DNN accelerators.
+•	Chapter 9 describes how to optimize the structure of the DNN models (i.e., the ‘network architecture’ of the DNN) to improve both throughput and energy eﬃciency while trying to minimize impact on accuracy. It discusses both manual design approaches as well as automatic design approaches (i.e., neural architecture search).
+•	Chapter 10, on advanced technologies, discusses how mixed-signal circuits and new memory technologies can be used to bring the compute closer to the data (e.g., processing in memory) to address the expensive data movement that dominates throughput and energy consumption of DNNs. It also brieﬂy discusses the promise of reducing energy consumption and increasing throughput by performing the computation and communication in the optical domain.
+
+What’s New?
+This book is an extension of a tutorial paper written by the same authors entitled “Eﬃcient Processing of Deep Neural Networks: A Tutorial and Survey” that appeared in the Proceedings of the IEEE in 2017 and slides from short courses given at ISCA and MICRO in 2016, 2017, and 2019 (slides available at http://eyeriss.mit.edu/tutorial.html). This book includes recent works since the publication of the tutorial paper along with a more in-depth treatment of topics such as dataﬂow, mapping, and processing in memory. We also provide updates on the fast-moving ﬁeld of co-design of DNN models and hardware in the areas of reduced precision, sparsity, and eﬃcient DNN model design. As part of this eﬀort, we present a new way of thinking about sparse representations and give a detailed treatment of how to handle and exploit sparsity. Finally, we touch upon recurrent neural networks, auto encoders, and transformers, which we did not discuss in the tutorial paper.
+
+Scope of book
+The main goal of this book is to teach the reader how to tackle the computational challenge of eﬃciently processing DNNs rather than how to design DNNs for increased accuracy. As a result, this book does not cover training (only touching on it lightly), nor does it cover the theory of deep learning or how to design DNN models (though it discusses how to make them eﬃcient) or use them for diﬀerent applications. For these aspects, please refer to other references such as Goodfellow’s book [2], Amazon’s book [3], and Stanford cs231n course notes [4].
+
+Vivienne Sze, Yu-Hsin Chen, Tien-Ju Yang, and Joel S. Emer 
+June 2020
